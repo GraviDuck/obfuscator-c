@@ -1,13 +1,12 @@
-name: Build Executables
+name: Build Linux ELF
 on: [push]
+
+permissions:
+  contents: write # Permiso crítico para que el bot pueda subir el .elf
 
 jobs:
   build:
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest]
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     
     steps:
       - name: Checkout code
@@ -22,15 +21,23 @@ jobs:
         run: pip install nuitka
 
       - name: Build with Nuitka
-        # Forzamos el nombre de salida para que no haya dudas
-        run: python -m nuitka --onefile --standalone --output-filename=obfuscator_final obfuscator.py
+        # Compilamos y forzamos el nombre del binario
+        run: python -m nuitka --onefile --standalone --output-filename=obfuscator obfuscator.py
 
-      - name: Upload Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: binarios-${{ matrix.os }}
-          # Usamos un comodín * para que agarre CUALQUIER cosa que se llame obfuscator_final
-          path: |
-            obfuscator_final.exe
-            obfuscator_final.bin
-            obfuscator_final
+      - name: Commit and Push ELF to Repository
+        run: |
+          # Configuramos tu identidad para el commit
+          git config --global user.name "GraviDuck"
+          git config --global user.email "asier.adell.diaz@gmail.com"
+          
+          # Renombramos el archivo generado por Nuitka a .elf
+          mv obfuscator.bin obfuscator.elf || mv obfuscator obfuscator.elf
+          
+          # Añadimos el .elf al repositorio
+          git add obfuscator.elf
+          
+          # Hacemos el commit. El [skip ci] evita que GitHub entre en bucle infinito
+          git commit -m "Auto-update obfuscator.elf [skip ci]" || echo "Sin cambios detectados"
+          
+          # Subimos el archivo a la rama main
+          git push origin main
