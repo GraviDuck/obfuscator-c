@@ -4,7 +4,7 @@ on: [push]
 jobs:
   build:
     strategy:
-      fail-fast: false # Para que si Windows falla, Linux siga adelante
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
@@ -22,17 +22,15 @@ jobs:
         run: pip install nuitka
 
       - name: Build with Nuitka
-        run: python -m nuitka --onefile --standalone obfuscator.py
-
-      - name: Rename Linux Output
-        if: runner.os == 'Linux'
-        # Aquí es donde ocurre la magia para que sea .elf
-        run: mv obfuscator.bin obfuscator.elf || mv obfuscator obfuscator.elf
+        # Forzamos el nombre de salida para que no haya dudas
+        run: python -m nuitka --onefile --standalone --output-filename=obfuscator_final obfuscator.py
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: binarios-${{ matrix.os }}
+          # Usamos un comodín * para que agarre CUALQUIER cosa que se llame obfuscator_final
           path: |
-            obfuscator.exe
-            obfuscator.elf
+            obfuscator_final.exe
+            obfuscator_final.bin
+            obfuscator_final
